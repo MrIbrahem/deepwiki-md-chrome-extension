@@ -261,7 +261,7 @@ async function processSinglePage(page, n) {
   const currentStep = batchState.processed + batchState.failed + 1;
   batchState.currentTitle = page.title;
   broadcastBatchUpdate('processing', {
-    message: `Processing ${currentStep}/${batchState.total}: ${page.title}`
+    message: `Processing ${currentStep}/${batchState.total}: ${n}. ${page.title}`
   });
 
   await navigateToPage(batchState.tabId, page.url);
