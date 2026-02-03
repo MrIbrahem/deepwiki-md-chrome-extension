@@ -272,7 +272,7 @@ async function processSinglePage(page) {
     throw new Error(convertResponse?.error || 'Conversion failed');
   }
 
-  const fileName = getUniqueFileName(convertResponse.markdownTitle || page.title);
+  const fileName = getFileNameFromUrl(page.url, getUniqueFileName(convertResponse.markdownTitle || page.title));
   batchState.convertedPages.push({ title: fileName, content: convertResponse.markdown });
   batchState.processed += 1;
   broadcastBatchUpdate('pageProcessed', {
@@ -280,6 +280,45 @@ async function processSinglePage(page) {
   });
 }
 
+// Utility: extract filename from URL path (sanitized). Returns name without extension.
+function getFileNameFromUrl(url, fallback) {
+  try {
+    const u = new URL(url);
+    let path = u.pathname || '';
+
+    if (path.endsWith('/')) path = path.slice(0, -1);
+
+    let last = path.substring(path.lastIndexOf('/') + 1);
+    if (!last) last = fallback || 'page';
+    else last = decodeURIComponent(last);
+
+    // Remove extension only if it's a known file extension
+    last = last.replace(/\.(md|markdown|html|htm|pdf|txt)$/i, '');
+
+    // Sanitize: keep dots for deepwiki numeric sections (e.g. 3.1-...)
+    last = last
+      .replace(/\s+/g, '-')
+      .replace(/[^a-zA-Z0-9.\-_]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-+|-+$/g, '');
+
+    if (!last && fallback) {
+      last = String(fallback)
+        .replace(/\s+/g, '-')
+        .replace(/[^a-zA-Z0-9.\-_]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-+|-+$/g, '');
+    }
+
+    return last || 'page';
+  } catch (e) {
+    return String(fallback || 'page')
+      .replace(/\s+/g, '-')
+      .replace(/[^a-zA-Z0-9.\-_]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+}
 async function createZipArchive() {
   const zip = new JSZip();
   let indexContent = `# ${batchState.folderName}\n\n## Content Index\n\n`;
